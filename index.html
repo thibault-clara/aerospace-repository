@@ -3,33 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aerospace Engineering Repository</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-        }
-        .folder-container {
-            margin-top: 20px;
-        }
-    </style>
+    <title>Thibault's Aerospace Engineering Repository</title>
 </head>
 <body>
-    <header>
-        <h1>Welcome to My Academic Website</h1>
-    </header>
+    <h1>Thibault's Aerospace Engineering Repository</h1>
+    <ul id="https://1drv.ms/f/s!Aln0D_AcoLlimIoKXq_I7ud4BF3CEw?e=JYl8h7"></ul> <!-- Where files will be listed -->
 
-    <section id="onedrive-folder">
-        <h2>My OneDrive Files</h2>
-        <div class="folder-container" id="folder-container">
-            <div class="folder-container">
-                <iframe src="https://1drv.ms/f/s!Aln0D_AcoLlimIoKXq_I7ud4BF3CEw?e=JYl8h7" width="800" height="600" frameborder="0" scrolling="no"></iframe>
-            </div>
-            
-        </div>
-    </section>
+    <script src="https://alcdn.msauth.net/browser/2.14.2/js/msal-browser.min.js"></script>
+    <script>
+        const msalConfig = {
+            auth: {
+                clientId: '1c09b3c6-8c9f-4a14-8b67-bf593f86913e',   // From Azure App Registration
+                authority: 'https://login.microsoftonline.com/fe7f559e-e568-4989-86cd-380a1329dd36',  // Azure Tenant or common
+                redirectUri: 'https://thibault-clara.github.io/aerospace-repository/'  // The URL you registered in Azure
+            }
+        };
 
-    <!-- <script>
-        // JavaScript for dynamically loading OneDrive folders (details below)
-    </script> -->
+        const msalInstance = new msal.PublicClientApplication(msalConfig);
+
+        const loginRequest = {
+            scopes: ["User.Read", "Files.Read.All"]  // Request OneDrive read access
+        };
+
+        // Perform login and token acquisition
+        msalInstance.loginPopup(loginRequest)
+            .then(loginResponse => {
+                console.log("Login successful:", loginResponse);
+                return msalInstance.acquireTokenSilent(loginRequest);
+            })
+            .then(tokenResponse => {
+                console.log("Token acquired:", tokenResponse.accessToken);
+                fetchOneDriveFiles(tokenResponse.accessToken);
+            })
+            .catch(error => {
+                console.error("Error logging in or acquiring token:", error);
+            });
+
+        function fetchOneDriveFiles(accessToken) {
+            const publicLink = "https://1drv.ms/f/s!Aln0D_AcoLlimIoKXq_I7ud4BF3CEw?e=JYl8h7";  // Replace with your share link
+            const encodedShareLink = btoa(publicLink).replace(/\//g, '_').replace(/\+/g, '-').replace(/=+$/, '');
+
+            const graphUrl = `https://graph.microsoft.com/v1.0/shares/u!${encodedShareLink}/driveItem/children`;
+
+            fetch(graphUrl, {
+                method: 'GET',
+                headers: {
+                    "Authorization": `Bearer ${accessToken}`,
+                    "Content-Type": "application/json"
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log(data);
+                displayFiles(data.value);
+            })
+            .catch(error => console.error("Error fetching files:", error));
+        }
+
+        function displayFiles(files) {
+            const fileList = document.getElementById("file-list");
+
+            files.forEach(file => {
+                const listItem = document.createElement("li");
+                const link = document.createElement("a");
+                link.href = file.webUrl;  // Direct file URL
+                link.textContent = file.name;
+                link.target = "_blank";  // Open in new tab
+
+                listItem.appendChild(link);
+                fileList.appendChild(listItem);
+            });
+        }
+    </script>
 </body>
 </html>
